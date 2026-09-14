@@ -1,10 +1,9 @@
 name: Android Build
 
 on:
+  workflow_dispatch:
   push:
-    branches: []
-  pull_request:
-    branches: []
+    branches: [test-toggle-animations]
 
 jobs:
   build:
