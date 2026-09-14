@@ -1,5 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@drawable/ic_pause_24" android:state_checked="true" />
-    <item android:drawable="@drawable/ic_play_24" />
-</selector>
+<animated-selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/playing_pause"
+        android:drawable="@drawable/ic_pause_24"
+        android:state_checked="true" />
+    <item
+        android:id="@+id/playing_play"
+        android:drawable="@drawable/ic_play_24" />
+
+    <!-- Morphs bars <-> triangle on play/pause; reversible so one AVD
+        covers both directions. Resting appearance is unchanged. -->
+    <transition
+        android:drawable="@drawable/avd_pause_to_play"
+        android:fromId="@id/playing_pause"
+        android:reversible="true"
+        android:toId="@id/playing_play" />
+</animated-selector>

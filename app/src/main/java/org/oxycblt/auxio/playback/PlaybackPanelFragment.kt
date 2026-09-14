@@ -21,6 +21,7 @@ package org.oxycblt.auxio.playback
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.graphics.drawable.Animatable
 import android.media.audiofx.AudioEffect
 import android.os.Build
 import android.os.Bundle
@@ -82,6 +83,7 @@ class PlaybackPanelFragment :
     private val queueModel: QueueViewModel by viewModels()
     private var equalizerLauncher: ActivityResultLauncher<Intent>? = null
     private var userAwarePagerCallback: UserAwarePagerCallback? = null
+    private var lastRepeatMode: RepeatMode? = null
 
     override fun onCreateBinding(inflater: LayoutInflater) =
         FragmentPlaybackPanelBinding.inflate(inflater)
@@ -286,7 +288,30 @@ class PlaybackPanelFragment :
     private fun updateRepeat(repeatMode: RepeatMode) {
         val repeatButton = requireBinding().playbackRepeat
         repeatButton.isChecked = repeatMode != RepeatMode.NONE
-        repeatButton.setIconResource(repeatMode.icon)
+        val last = lastRepeatMode
+        lastRepeatMode = repeatMode
+        if (last == null || last == repeatMode) {
+            // First bind or no change, swap instantly without animation.
+            repeatButton.setIconResource(repeatMode.icon)
+            return
+        }
+        // Repeat cycles NONE -> ALL -> TRACK -> NONE, so only three forward
+        // transitions exist. Play the matching one, then leave its final frame.
+        val transition =
+            when {
+                last == RepeatMode.NONE && repeatMode == RepeatMode.ALL ->
+                    R.drawable.avd_repeat_off_to_all
+                last == RepeatMode.ALL && repeatMode == RepeatMode.TRACK ->
+                    R.drawable.avd_repeat_all_to_one
+                last == RepeatMode.TRACK && repeatMode == RepeatMode.NONE ->
+                    R.drawable.avd_repeat_one_to_off
+                else -> {
+                    repeatButton.setIconResource(repeatMode.icon)
+                    return
+                }
+            }
+        repeatButton.setIconResource(transition)
+        (repeatButton.icon as? Animatable)?.start()
     }
 
     private fun updatePlaying(isPlaying: Boolean) {
