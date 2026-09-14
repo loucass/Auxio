@@ -21,14 +21,19 @@ package org.oxycblt.auxio.playback.service
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.os.Build
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
+import android.view.ContextThemeWrapper
 import androidx.annotation.DrawableRes
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.car.app.mediaextensions.MetadataExtras
 import androidx.core.app.NotificationCompat
+import androidx.core.graphics.drawable.DrawableCompat
 import androidx.media.app.NotificationCompat.MediaStyle
 import androidx.media.session.MediaButtonReceiver
 import coil3.request.CachePolicy
@@ -50,6 +55,10 @@ import org.oxycblt.auxio.playback.state.PlaybackStateManager
 import org.oxycblt.auxio.playback.state.Progression
 import org.oxycblt.auxio.playback.state.QueueChange
 import org.oxycblt.auxio.playback.state.RepeatMode
+import org.oxycblt.auxio.ui.UISettings
+import org.oxycblt.auxio.util.getColorCompat
+import org.oxycblt.auxio.util.getDrawableCompat
+import org.oxycblt.auxio.util.isNight
 import org.oxycblt.auxio.util.newBroadcastPendingIntent
 import org.oxycblt.auxio.util.newMainPendingIntent
 import org.oxycblt.musikr.MusicParent
@@ -69,6 +78,7 @@ private constructor(
     private val playbackManager: PlaybackStateManager,
     private val bitmapProvider: BitmapProvider,
     private val imageSettings: ImageSettings,
+    private val uiSettings: UISettings,
     private val mediaSessionInterface: MediaSessionInterface,
 ) : PlaybackStateManager.Listener, ImageSettings.Listener {
 
@@ -78,6 +88,7 @@ private constructor(
         private val playbackManager: PlaybackStateManager,
         private val bitmapProvider: BitmapProvider,
         private val imageSettings: ImageSettings,
+        private val uiSettings: UISettings,
         private val mediaSessionInterface: MediaSessionInterface,
     ) {
         fun create(context: Context, foregroundListener: ForegroundListener) =
@@ -87,6 +98,7 @@ private constructor(
                 playbackManager,
                 bitmapProvider,
                 imageSettings,
+                uiSettings,
                 mediaSessionInterface,
             )
     }
@@ -97,6 +109,9 @@ private constructor(
 
     val notification: ForegroundServiceNotification
         field = PlaybackNotification(context, mediaSession.sessionToken)
+
+    private var fallbackArtwork: Bitmap? = null
+    private var fallbackKey: String? = null
 
     fun attach() {
         playbackManager.addListener(this)
@@ -119,6 +134,8 @@ private constructor(
         bitmapProvider.release()
         playbackManager.removeListener(this)
         imageSettings.unregisterListener(this)
+        fallbackArtwork = null
+        fallbackKey = null
         mediaSession.apply {
             isActive = false
             release()
@@ -192,6 +209,9 @@ private constructor(
     // --- SETTINGS OVERRIDES ---
 
     override fun onImageSettingsChanged() {
+        // Theme/colors may have changed, drop cached fallback so it is re-rendered.
+        fallbackArtwork = null
+        fallbackKey = null
         // Need to reload the metadata cover.
         updateMediaMetadata(playbackManager.currentSong, playbackManager.parent)
     }
@@ -290,10 +310,11 @@ private constructor(
 
                 override fun onCompleted(bitmap: Bitmap?) {
                     L.d("Bitmap loaded, applying media session and posting notification")
-                    if (bitmap != null) {
-                        builder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, bitmap)
-                        builder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, bitmap)
-                    }
+                    // Always provide artwork so lock-screen / SystemUI media controls have
+                    // something to show even when the song has no embedded cover.
+                    val art = bitmap ?: getFallbackArtwork()
+                    builder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, art)
+                    builder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, art)
                     val metadata = builder.build()
                     mediaSession.setMetadata(metadata)
                     notification.updateMetadata(metadata)
@@ -301,6 +322,59 @@ private constructor(
                 }
             },
         )
+    }
+
+    /**
+     * Render Auxio's default cover (same background + disk logo as the in-app [CoverView]
+     * placeholder) as a full-size software [Bitmap] suitable for [MediaSessionCompat] and
+     * notifications.
+     *
+     * Must stay large (>= [MediaSessionCompat.getBitmapDimensionLimit]) - tiny placeholders
+     * crashed some SystemUIs in the past. Colors are resolved against the user's accent and
+     * dark/light setting (mirroring MainActivity.setupTheme) so the lock-screen matches the
+     * app. Result is cached until settings change.
+     */
+    private fun getFallbackArtwork(): Bitmap {
+        val nightMask = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        val key =
+            "${uiSettings.accent.index}:${uiSettings.theme}:${uiSettings.useBlackTheme}:$nightMask"
+        fallbackArtwork?.takeIf { fallbackKey == key }?.let { return it }
+        // Mirror MainActivity.setupTheme: service context has no AppCompat night override,
+        // so compute the effective dark mode explicitly and force the night qualifier
+        // to match, otherwise night colors would follow the system instead of the app.
+        val dark =
+            when (uiSettings.theme) {
+                AppCompatDelegate.MODE_NIGHT_YES -> true
+                AppCompatDelegate.MODE_NIGHT_NO -> false
+                else -> context.isNight
+            }
+        val themeRes =
+            if (dark && uiSettings.useBlackTheme) uiSettings.accent.blackTheme
+            else uiSettings.accent.theme
+        val config = Configuration(context.resources.configuration)
+        config.uiMode =
+            (config.uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
+                (if (dark) Configuration.UI_MODE_NIGHT_YES
+                 else Configuration.UI_MODE_NIGHT_NO)
+        val themed = ContextThemeWrapper(context.createConfigurationContext(config), themeRes)
+        val size = MediaSessionCompat.getBitmapDimensionLimit().takeIf { it > 0 } ?: 512
+        val result = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(result)
+        canvas.drawColor(themed.getColorCompat(R.color.sel_cover_bg).defaultColor)
+        // Wrap before mutate so any XML tint is reliably overridden in service context.
+        val icon =
+            DrawableCompat.wrap(themed.getDrawableCompat(R.drawable.ic_album_24)).mutate()
+        DrawableCompat.setTint(
+            icon,
+            themed.getColorCompat(R.color.sel_on_cover_bg).defaultColor,
+        )
+        // Same proportions as CoverView.StyledDrawable: icon fills the middle 50%.
+        val inset = size / 4
+        icon.setBounds(inset, inset, size - inset, size - inset)
+        icon.draw(canvas)
+        fallbackArtwork = result
+        fallbackKey = key
+        return result
     }
 
     /**
