@@ -6,12 +6,13 @@
         android:state_checked="true" />
     <item
         android:id="@+id/shuffle_off"
-        android:drawable="@drawable/ic_shuffle_off_24" />
+        android:drawable="@drawable/ic_line_off_24" />
 
-    <!-- Morphs the icon shape on toggle; reversible so one AVD covers both directions.
-        Resting appearance is unchanged from the old selector. -->
+    <!-- Line retracts, logo arrows sketch in one by one, icon pops.
+        Reversible so one AVD covers both directions.
+        Resting appearance is unchanged from before. -->
     <transition
-        android:drawable="@drawable/avd_shuffle_off_to_on"
+        android:drawable="@drawable/avd_shuffle_line_to_logo"
         android:fromId="@id/shuffle_off"
         android:reversible="true"
         android:toId="@id/shuffle_on" />

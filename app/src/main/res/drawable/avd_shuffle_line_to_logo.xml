@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/vd_shuffle_line_logo">
+    <target
+        android:name="line"
+        android:animation="@animator/shuffle_line_retract" />
+    <target
+        android:name="logo_a"
+        android:animation="@animator/shuffle_logo_a_draw" />
+    <target
+        android:name="logo_b"
+        android:animation="@animator/shuffle_logo_b_draw" />
+    <target
+        android:name="logo_c"
+        android:animation="@animator/shuffle_logo_c_draw" />
+    <target
+        android:name="logo_pop"
+        android:animation="@animator/shuffle_logo_pop" />
+</animated-vector>

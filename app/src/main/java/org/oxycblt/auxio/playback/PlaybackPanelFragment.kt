@@ -28,6 +28,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
+import android.view.animation.OvershootInterpolator
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.Toolbar
@@ -312,15 +313,38 @@ class PlaybackPanelFragment :
             }
         repeatButton.setIconResource(transition)
         (repeatButton.icon as? Animatable)?.start()
+        punch(repeatButton)
     }
 
     private fun updatePlaying(isPlaying: Boolean) {
-        requireBinding().playbackPlayPause.isChecked = isPlaying
+        val playButton = requireBinding().playbackPlayPause
+        if (playButton.isChecked != isPlaying) {
+            playButton.isChecked = isPlaying
+            punch(playButton)
+        }
         requireBinding().playbackSeekBar?.setWaveEnabled(isPlaying)
     }
 
     private fun updateShuffled(isShuffled: Boolean) {
-        requireBinding().playbackShuffle.isChecked = isShuffled
+        val shuffleButton = requireBinding().playbackShuffle
+        if (shuffleButton.isChecked != isShuffled) {
+            shuffleButton.isChecked = isShuffled
+            punch(shuffleButton)
+        }
+    }
+
+    /** Spring punch on toggle taps so the button itself feels physical. */
+    private fun punch(button: View) {
+        button.animate().cancel()
+        button.scaleX = 0.85f
+        button.scaleY = 0.85f
+        button
+            .animate()
+            .scaleX(1f)
+            .scaleY(1f)
+            .setDuration(300)
+            .setInterpolator(OvershootInterpolator())
+            .start()
     }
 
     private fun updatePager(queue: PagerQueue) {

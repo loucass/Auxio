@@ -6,14 +6,13 @@
     android:viewportHeight="960">
     <!-- ic_repeat_off_24 rescaled x40 to the shared 960 viewport.
         Kept as a separate file so the original (used by widget/notification)
-        stays untouched. -->
+        stays untouched. Spins as a whole on toggle. -->
     <group
-        android:name="root"
+        android:name="arrows"
         android:pivotX="480"
         android:pivotY="480">
         <path
             android:name="icon"
-            android:fillAlpha="1"
             android:fillColor="@android:color/white"
             android:pathData="M280,880L120,720L280,560L336,618L274,680L680,680L680,520L760,520L760,760L274,760L336,822ZM200,440L200,200L686,200L624,138L680,80L840,240L680,400L624,342L686,280L280,280L280,440Z" />
     </group>

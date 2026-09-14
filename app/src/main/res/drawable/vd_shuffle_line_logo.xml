@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <!-- Straight line (off look). Retracts via trim when turning on. -->
+    <path
+        android:name="line"
+        android:pathData="M180,480H780"
+        android:strokeColor="@android:color/white"
+        android:strokeLineCap="round"
+        android:strokeWidth="80"
+        android:trimPathEnd="1" />
+    <!-- Shuffle logo (on look), sketched in arrow by arrow. -->
+    <group
+        android:name="logo_pop"
+        android:pivotX="480"
+        android:pivotY="480">
+        <path
+            android:name="logo_a"
+            android:fillColor="@android:color/white"
+            android:pathData="M556,846L556,731L648,731L534,617L616,537L730,648L730,558L846,558L846,846L556,846Z"
+            android:trimPathEnd="0" />
+        <path
+            android:name="logo_b"
+            android:fillColor="@android:color/white"
+            android:pathData="M194,845L114,764L648,230L556,230L556,114L846,114L846,403L730,403L730,311L194,845Z"
+            android:trimPathEnd="0" />
+        <path
+            android:name="logo_c"
+            android:fillColor="@android:color/white"
+            android:pathData="M349,429L114,195L194,114L431,348L349,429Z"
+            android:trimPathEnd="0" />
+    </group>
+</vector>
