@@ -27,6 +27,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
+import android.view.animation.OvershootInterpolator
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.Toolbar
@@ -290,12 +291,36 @@ class PlaybackPanelFragment :
     }
 
     private fun updatePlaying(isPlaying: Boolean) {
-        requireBinding().playbackPlayPause.isChecked = isPlaying
+        val playButton = requireBinding().playbackPlayPause
+        if (playButton.isChecked != isPlaying) {
+            // Swap instantly (always correct) then punch: this button does
+            // not reliably render drawable-content animation, but view
+            // transforms demonstrably play.
+            playButton.setIconResource(
+                if (isPlaying) R.drawable.ic_pause_24 else R.drawable.ic_play_24
+            )
+            playButton.isChecked = isPlaying
+            punch(playButton)
+        }
         requireBinding().playbackSeekBar?.setWaveEnabled(isPlaying)
     }
 
     private fun updateShuffled(isShuffled: Boolean) {
         requireBinding().playbackShuffle.isChecked = isShuffled
+    }
+
+    /** Spring punch so toggle taps feel physical. */
+    private fun punch(button: View) {
+        button.animate().cancel()
+        button.scaleX = 0.85f
+        button.scaleY = 0.85f
+        button
+            .animate()
+            .scaleX(1f)
+            .scaleY(1f)
+            .setDuration(300)
+            .setInterpolator(OvershootInterpolator())
+            .start()
     }
 
     private fun updatePager(queue: PagerQueue) {
