@@ -101,9 +101,10 @@ constructor(
 
         // Searching is time-consuming, so do it in the background.
         L.d("Searching music library for $query")
-        currentSearchJob = viewModelScope.launch(Dispatchers.Default) {
-            searchResults.value = searchImpl(library, query).also { yield() }
-        }
+        currentSearchJob =
+            viewModelScope.launch(Dispatchers.Default) {
+                searchResults.value = searchImpl(library, query).also { yield() }
+            }
     }
 
     private suspend fun searchImpl(library: Library, query: String): List<Item> {
