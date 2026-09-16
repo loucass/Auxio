@@ -124,6 +124,9 @@ class TagParserTest {
                         "TXXX:MUSICBRAINZ ALBUM ID" to listOf("album-id-456"),
                         "TXXX:MUSICBRAINZ ARTIST ID" to listOf("artist-id-789"),
                         "TXXX:MUSICBRAINZ ALBUM ARTIST ID" to listOf("album-artist-id-012"),
+                        // Artist names must be present, otherwise the parser
+                        // falls back to composer tags and drops the IDs.
+                        "TPE1" to listOf("Test Artist"),
                     )
             )
 
